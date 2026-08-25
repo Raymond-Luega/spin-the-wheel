@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Spin the Wheel Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body
+  class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex flex-col items-center justify-center text-white">
+
+  <h1 class="text-3xl font-bold mb-6">🎡 Spin the Wheel</h1>
+
+  <!-- Wheel -->
+  <div class="relative mb-6">
+    <canvas id="wheelCanvas" width="500" height="500" class="rounded-full border-8 border-white"></canvas>
+    <!-- Spin Button at Center -->
+    <button onclick="spinWheel()"
+      class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 px-6 py-3 bg-green-500 hover:bg-green-600 rounded-full text-lg font-bold shadow-lg">
+      Spin
+    </button>
+    <!-- Arrow inside wheel pointing down -->
+    <div
+      class="absolute top-[5px] left-1/2 transform -translate-x-1/2 w-0 h-0 
+                border-l-[15px] border-r-[15px] border-t-[25px] border-l-transparent border-r-transparent border-t-red-600">
+    </div>
+  </div>
+
+  <!-- Input for Names -->
+  <div class="flex space-x-2 mb-4">
+    <input id="nameInput" type="text" placeholder="Enter name" class="px-3 py-2 rounded-md text-black w-60" />
+    <button onclick="addName()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg font-bold shadow-lg">
+      Enter
+    </button>
+  </div>
+
+  <!-- Display Names -->
+  <div id="nameList" class="mb-4 text-lg"></div>
+
+  <!-- Popup Modal -->
+  <div id="winnerModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+    <div class="bg-white text-black rounded-lg p-6 w-80 text-center shadow-lg">
+      <h2 id="winnerName" class="text-2xl font-bold mb-4"></h2>
+      <div class="flex justify-around">
+        <button onclick="removeWinner()" class="px-4 py-2 bg-red-500 text-white rounded-lg">Remove</button>
+        <button onclick="closeModal()" class="px-4 py-2 bg-gray-500 text-white rounded-lg">Close</button>
+      </div>
+    </div>
+  </div>
+
+
+
+<script>
+  const canvas = document.getElementById('wheelCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let names = [];
+  let colors = [];
+
+  // ==========================================
+  // CONTROLLED WINNER
+  // ==========================================
+  const controlledWinner = "Herald C. Sobrevilla";
+
+  // ==========================================
+  // WHEEL SETTINGS
+  // ==========================================
+  let currentRotation = 0;
+  let isSpinning = false;
+
+
+  // ==========================================
+  // LOAD SAVED NAMES
+  // ==========================================
+  function loadNames() {
+
+    const savedNames =
+      localStorage.getItem("spinWheelNames");
+
+    const savedColors =
+      localStorage.getItem("spinWheelColors");
+
+    if (savedNames) {
+      names = JSON.parse(savedNames);
+    }
+
+    if (savedColors) {
+      colors = JSON.parse(savedColors);
+    }
+
+    // Make sure every name has a color
+    while (colors.length < names.length) {
+      colors.push(randomColor());
+    }
+
+    
+    drawWheel();
+  }
+
+
+  // ==========================================
+  // SAVE NAMES
+  // ==========================================
+  function saveNames() {
+
+    localStorage.setItem(
+      "spinWheelNames",
+      JSON.stringify(names)
+    );
+
+    localStorage.setItem(
+      "spinWheelColors",
+      JSON.stringify(colors)
+    );
+  }
+
+
+  // ==========================================
+  // ADD NAME
+  // ==========================================
+  function addName() {
+  const input = document.getElementById('nameInput');
+  const name = input.value.trim();
+
+  if (name === "") {
+    return;
+  }
+
+  if (names.includes(name)) {
+    alert("This name is already in the wheel!");
+    input.value = "";
+    return;
+  }
+
+  names.push(name);
+  colors.push(randomColor());
+
+  input.value = "";
+
+  // Save names
+  saveNames();
+
+  // Draw names only inside the wheel
+  drawWheel();
+}
+
+
+  // ==========================================
+  // UPDATE NAME LIST
+  // ==========================================
+  function updateNameList() {
+
+    const nameList =
+      document.getElementById('nameList');
+
+
+    if (names.length === 0) {
+
+      nameList.innerText =
+        "No players";
+
+    } else {
+
+      nameList.innerText =
+        "Players: " +
+        names.join(", ");
+    }
+  }
+
+
+  // ==========================================
+  // RANDOM COLOR
+  // ==========================================
+  function randomColor() {
+
+    const letters =
+      '0123456789ABCDEF';
+
+    let color = '#';
+
+
+    for (let i = 0; i < 6; i++) {
+
+      color +=
+        letters[
+          Math.floor(
+            Math.random() * 16
+          )
+        ];
+    }
+
+
+    return color;
+  }
+
+
+  // ==========================================
+  // DRAW WHEEL
+  // ==========================================
+  function drawWheel() {
+
+    ctx.clearRect(
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+
+    if (names.length === 0) {
+      return;
+    }
+
+
+    const centerX = 250;
+    const centerY = 250;
+    const radius = 250;
+
+
+    const anglePerSegment =
+      (2 * Math.PI) /
+      names.length;
+
+
+    names.forEach(
+      (name, i) => {
+
+        const startAngle =
+          i * anglePerSegment;
+
+
+        const endAngle =
+          (i + 1) *
+          anglePerSegment;
+
+
+        // ------------------------------
+        // Wheel segment
+        // ------------------------------
+        ctx.beginPath();
+
+
+        ctx.moveTo(
+          centerX,
+          centerY
+        );
+
+
+        ctx.arc(
+          centerX,
+          centerY,
+          radius,
+          startAngle,
+          endAngle
+        );
+
+
+        ctx.closePath();
+
+
+        ctx.fillStyle =
+          colors[i];
+
+
+        ctx.fill();
+
+
+        // ------------------------------
+        // Border
+        // ------------------------------
+        ctx.strokeStyle =
+          "white";
+
+
+        ctx.lineWidth = 2;
+
+
+        ctx.stroke();
+
+
+        // ------------------------------
+        // Name
+        // ------------------------------
+        ctx.save();
+
+
+        ctx.translate(
+          centerX,
+          centerY
+        );
+
+
+        ctx.rotate(
+          startAngle +
+          (anglePerSegment / 2)
+        );
+
+
+        ctx.textAlign =
+          "right";
+
+
+        ctx.textBaseline =
+          "middle";
+
+
+        ctx.fillStyle =
+          "white";
+
+
+        ctx.font =
+          "bold 16px Arial";
+
+
+        ctx.fillText(
+          name,
+          radius - 10,
+          0
+        );
+
+
+        ctx.restore();
+      }
+    );
+  }
+
+
+  // ==========================================
+  // SPIN WHEEL
+  // ==========================================
+  function spinWheel() {
+
+    if (isSpinning) {
+      return;
+    }
+
+
+    if (names.length === 0) {
+
+      alert(
+        "Please add names first!"
+      );
+
+      return;
+    }
+
+
+    // Winner must exist
+    if (
+      !names.includes(
+        controlledWinner
+      )
+    ) {
+
+      alert(
+        "Winner \"" +
+        controlledWinner 
+        
+      );
+
+      return;
+    }
+
+
+    isSpinning = true;
+
+
+    // ------------------------------------------
+    // Winner index
+    // ------------------------------------------
+    const winnerIndex =
+      names.indexOf(
+        controlledWinner
+      );
+
+
+    // ------------------------------------------
+    // Segment angle
+    // ------------------------------------------
+    const anglePerSegment =
+      360 / names.length;
+
+
+    // ------------------------------------------
+    // Center of winner segment
+    // ------------------------------------------
+    const winnerAngle =
+      (winnerIndex *
+        anglePerSegment) +
+      (anglePerSegment / 2);
+
+
+    // ------------------------------------------
+    // Arrow is at TOP
+    // ------------------------------------------
+    const arrowAngle = 270;
+
+
+    // ------------------------------------------
+    // Target rotation
+    // ------------------------------------------
+    let targetAngle =
+      arrowAngle -
+      winnerAngle;
+
+
+    targetAngle =
+      ((targetAngle % 360) + 360) %
+      360;
+
+
+    // ------------------------------------------
+    // Current wheel angle
+    // ------------------------------------------
+    let currentAngle =
+      ((currentRotation % 360) + 360) %
+      360;
+
+
+    // ------------------------------------------
+    // Rotation required
+    // ------------------------------------------
+    let rotationNeeded =
+      targetAngle -
+      currentAngle;
+
+
+    if (rotationNeeded < 0) {
+
+      rotationNeeded += 360;
+    }
+
+
+    // ------------------------------------------
+    // 5 full rotations
+    // ------------------------------------------
+    const extraSpins =
+      5 * 360;
+
+
+    // Continue spinning
+    currentRotation +=
+      extraSpins +
+      rotationNeeded;
+
+
+    // ------------------------------------------
+    // Animate
+    // ------------------------------------------
+    canvas.style.transition =
+      "transform 4s cubic-bezier(0.12, 0.8, 0.18, 1)";
+
+
+    canvas.style.transform =
+      `rotate(${currentRotation}deg)`;
+
+
+    // ------------------------------------------
+    // Show winner
+    // ------------------------------------------
+    setTimeout(
+      () => {
+
+        document.getElementById(
+          'winnerName'
+        ).innerText =
+          "🎉 Winner: " +
+          controlledWinner;
+
+
+        document.getElementById(
+          'winnerModal'
+        ).classList.remove(
+          'hidden'
+        );
+
+
+        isSpinning = false;
+
+      },
+      4000
+    );
+  }
+
+
+  // ==========================================
+  // REMOVE WINNER
+  // ==========================================
+  // Does NOT delete the name.
+  // It only closes the winner popup.
+  // ==========================================
+  function removeWinner() {
+
+  const index = names.indexOf(controlledWinner);
+
+  if (index !== -1) {
+
+    names.splice(index, 1);
+    colors.splice(index, 1);
+
+    // Save updated names
+    saveNames();
+
+    // Redraw wheel
+    drawWheel();
+
+    // Reset rotation
+    currentRotation = 0;
+
+    canvas.style.transition = "none";
+    canvas.style.transform = "rotate(0deg)";
+  }
+
+  closeModal();
+}
+
+
+  // ==========================================
+  // CLOSE MODAL
+  // ==========================================
+  function closeModal() {
+
+    document
+      .getElementById('winnerModal')
+      .classList.add(
+        'hidden'
+      );
+  }
+
+
+  // ==========================================
+  // LOAD EVERYTHING WHEN PAGE OPENS
+  // ==========================================
+  loadNames();
+
+</script>
+
+
+
+
+
+
+</body>
+
+</html>
